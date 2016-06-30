@@ -1,13 +1,21 @@
+#if ARDUINO >= 100 
+  #include "Arduino.h"
+#else
+  #include "WProgram.h"
+#endif
+
+#include <Streaming.h>
+#include <Switch.h>
 #include "mystructs.h"
 
-#define  LidMotorSwitch1 4  //S3
-#define  LidMotorSwitch2 5  //S4
+#define  LidMotorSwitch1 6  //S3
+#define  LidMotorSwitch2 9  //S4
 
-#define  TopMotorSwitch1 7  //S1
-#define  TopMotorSwitch2 9  //S2
+#define  TopMotorSwitch1 4  //S1
+#define  TopMotorSwitch2 5  //S2
 
-#define ButtonRoofOpen 6
-#define ButtonRoofClose 8
+#define ButtonRoofOpen 8
+#define ButtonRoofClose 7
 
 #define CLOCKWISE  1
 #define STOP	0
@@ -48,6 +56,17 @@
 #define COMMAND_CLOSE 2
 #define COMMAND_AUTO_OPEN 3
 #define COMMAND_AUTO_CLOSE 4
+#define COMMAND_AUTO COMMAND_AUTO_OPEN
+Switch InRoofOpen= Switch (ButtonRoofOpen, INPUT,LOW);
+Switch InRoofClose= Switch(ButtonRoofClose, INPUT,LOW);
+Switch InputSW1= Switch (TopMotorSwitch1, INPUT,LOW);
+Switch InputSW2= Switch (TopMotorSwitch2, INPUT,LOW);
+Switch InputSW3= Switch (LidMotorSwitch1, INPUT,LOW);
+Switch InputSW4= Switch (LidMotorSwitch2, INPUT,LOW);
+int SW1 = 0;
+int SW2 = 0;
+int SW3 = 0;
+int SW4 = 0;
 
 int pin[6];
 int _pin[6];
@@ -55,8 +74,8 @@ int i;
 int current_av_steps;
 OutputCmd opening_state_cmds[16];
 OutputCmd closing_state_cmds[16];
-int current_state;
-int current_command;
+int current_state, old_state;
+int current_command, old_command;
 float raw_current[CURRENT_AVERAGING_STEPS];
 unsigned long motion_start_time;
 
@@ -68,17 +87,16 @@ void setup() {
    pinMode(16, OUTPUT);
    pinMode(10, OUTPUT);
 
-   pinMode(4, INPUT);
+  /* pinMode(4, INPUT);
    pinMode(5, INPUT);
    pinMode(6, INPUT);
    pinMode(7, INPUT);
    pinMode(8, INPUT);
    pinMode(9, INPUT);
-
+*/
     Serial.begin(9600);
-    OldRoofClose = 0;
-    OldRoofOpen = 0;
     current_command = COMMAND_IDLE;
+    old_command = current_command;
      //Initialise states and commands
     int i;
     for (i = 0; i<=15; i++)
@@ -137,9 +155,25 @@ void setup() {
 
 void loop ()
 {
-
+  PollInputs();
+  
     current_command = ReadUserCommand();
+    if (old_command != current_command)
+    {
+      Serial << "current command " << current_command << "\n";
+    }
+    old_command = current_command;
 
+  current_state = ReadSwitchState();
+  if (current_state != old_state)
+    Serial << " new state is" << current_state<< "\n";
+  old_state = current_state;
+  
+}
+
+
+      
+/*}
     if (current_command == COMMAND_IDLE)
     {
         Motor1Stop();
@@ -189,7 +223,7 @@ void loop ()
     CurrentProtection();
     CheckTimeout();
 }
-
+*/
 
 void CurrentProtection()
 {
@@ -280,7 +314,8 @@ void Motor1Stop()
 
 void ReadAndDisplayInputs()
 {
-    for (i= 0; i< 6; i++)
+  
+  for (i= 0; i< 6; i++)
         pin[i] = digitalRead(i+4);
 
     for (i= 0; i< 6; i++)
@@ -293,8 +328,8 @@ void ReadAndDisplayInputs()
       Serial.println(pin[i]);
       }
       _pin[i]=pin[i];
-
     }
+    
 }
 
 
@@ -306,14 +341,39 @@ float ADCValueToCurrent (long int adc_in)
 
 }
 
+void PollInputs()
+{
+   InRoofOpen.poll();  
+   InRoofClose.poll();  
+   InputSW1.poll();
+   InputSW2.poll();
+   InputSW3.poll();
+   InputSW4.poll();
+ 
+}
+
 int ReadSwitchState()
 {
     // Switches are inverted logic: high: open , low closed
     // converted to 0 = open , 1 = close
-    int sw1 = !digitalRead(TopMotorSwitch1);
-    int sw2 = !digitalRead(TopMotorSwitch2);
-    int sw3 = !digitalRead(LidMotorSwitch1);
-    int sw4 = !digitalRead(LidMotorSwitch2);
+    
+    int sw1 = SW1;
+    int sw2 = SW2;
+    int sw3 = SW3;
+    int sw4 = SW4;
+    if (InputSW1.pushed()) sw1 = 1;
+    if (InputSW1.released()) sw1 = 0;
+    if (InputSW2.pushed()) sw2 = 1;
+    if (InputSW2.released()) sw2 = 0;
+    if (InputSW3.pushed()) sw3 = 1;
+    if (InputSW3.released()) sw3 = 0;
+    if (InputSW4.pushed()) sw4 = 1;
+    if (InputSW4.released()) sw4 = 0;
+    SW1 = sw1;
+    SW2 = sw2;
+    SW3 = sw3;
+    SW4 = sw4;
+        
     return (8*sw1 + 4*sw2 + 2*sw3 + sw4);
 }
 
@@ -324,59 +384,62 @@ void CheckTimeout()
             current_command = COMMAND_IDLE;
 }
 
+
 int ReadUserCommand()
 {
-    int nowRoofOpen = digitalRead(ButtonRoofOpen);
-    int nowRoofClose = digitalRead(ButtonRoofClose);
-    if ( (current_command >= COMMAND_AUTO_OPEN) && (nowRoofOpen || nowRoofClose))
-            return COMMAND_IDLE;
+    
+   int output_command = current_command;
 
-    int output_command;
+  if( (InRoofOpen.pushed() || InRoofClose.pushed()) && (current_command >= COMMAND_AUTO))
+  {
 
-    if (nowRoofOpen & !OldRoofOpen)
-    {
-            if (nowRoofOpen)
-            {
+                      Serial << "STOP Auto!!\n";
+                      return COMMAND_IDLE;
+  }
+
+  if(InRoofOpen.pushed()) {
                     motion_start_time = millis();
                     output_command = COMMAND_OPEN;
-            }
-            else
-            {
-                    if (millis()-motion_start_time <= 200)
-                    {
+                    Serial << "command_open\n";
+  }
+  if(InRoofOpen.released()) 
+  {
+    if ((current_command == COMMAND_OPEN) &&  ((millis()-motion_start_time) <= 200))
+    {
                       motion_start_time = millis();
                       output_command= COMMAND_AUTO_OPEN;
+                                          Serial << "command_auto_open\n";
                     }
-                     else output_command = COMMAND_IDLE;
-            }
-    }
-
-    if (nowRoofClose & !OldRoofClose)
-    {
-            if (nowRoofClose)
-            {
+                     else {
+                     output_command = COMMAND_IDLE; 
+                   Serial << "command_idle\n" ;
+                 }
+  }                
+  
+  if(InRoofClose.pushed()) {
                     motion_start_time = millis();
                     output_command = COMMAND_CLOSE;
-            }
-            else
-            {
-                    if (millis()-motion_start_time <= 200)
-                    {
+                    Serial << "command_close\n";
+  }
+  if(InRoofClose.released()) 
+  {
+    if ((current_command == COMMAND_CLOSE) &&  ((millis()-motion_start_time) <= 200))
+    {
                       motion_start_time = millis();
                       output_command= COMMAND_AUTO_CLOSE;
+                                          Serial << "command_auto_close\n";
                     }
-                     else output_command = COMMAND_IDLE;
-            }
-    }
-
-    if ( (nowRoofClose == 0) && (OldRoofClose == 0) && (nowRoofOpen == 0) && (OldRoofOpen == 0))
-            output_command = COMMAND_IDLE;
-
-    OldRoofOpen = nowRoofOpen;
-    OldRoofClose = nowRoofClose;
-
+                     else {
+                     output_command = COMMAND_IDLE; 
+                   Serial << "command_idle\n" ;
+                 }
+  }
     return output_command;
 }
+
+
+
+
 
 
 
