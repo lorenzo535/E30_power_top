@@ -1,6 +1,6 @@
 typedef struct {
-  int motor_1_cmd;
-  int motor_2_cmd;
+  int motor_top_cmd;
+  int motor_lid_cmd;
 } OutputCmd;
 
 
