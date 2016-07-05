@@ -27,28 +27,28 @@
 
 #define MV_TO_AMP (CURRENT_RANGE  )/ 2500
 #define MAX_MOTION_TIME_MS 	25000	//25 seconds
-// CLOSING SEQUENCE STATES
-#define TOP_UNLOCKED_AND_LIFTED	2
-#define TENSION_BOW_RAISING	6
-#define TENSION_BOW_UP   	14
-#define COVER_UNLOCKED		15
-#define COVER_OPEN		13
-#define TENSION_BOW_LOWERING	5
-#define TOP_IN_COMPARTMENT	1
-#define COVER_CLOSING		11
-#define COVER_LOCKED		10
+// ROOF OPENING SEQUENCE STATES
+#define OP_TOP_UNLOCKED_AND_LIFTED	2
+#define OP_TENSION_BOW_RAISING  	6
+#define OP_TENSION_BOW_ALL_UP       	14
+#define OP_COVER_UNLOCKED		15
+#define OP_COVER_OPEN    		13
+#define OP_TENSION_BOW_LOWERING	       5
+#define OP_TOP_IN_COMPARTMENT	      1
+#define OP_COVER_CLOSING		11
+#define OP_COVER_LOCKED             10
 
 
-//OPENING SEQUENCE STATES
-#define COVER_LOCKED		10
-#define COVER_UNLOCKED		11
-#define COVER_OPENED		9
-#define RAISING_TOP		5
-#define TENSION_BOW_ALL_UP	13
-#define COVER_CLOSED		15
-#define COVER_LOCKED		14
-#define TENSION_BOW_LOWERING	6
-#define TENSION_BOW_DOWN	2
+//ROOF CLOSING SEQUENCE STATES
+#define CL_COVER_LOCKED_STOWED  10
+#define CL_COVER_UNLOCKED	11
+#define CL_COVER_OPENED		9
+#define CL_RAISING_TOP		5
+#define CL_TENSION_BOW_ALL_UP	13
+#define CL_COVER_CLOSING	15
+#define CL_COVER_LOCKED	        14
+#define CL_TENSION_BOW_LOWERING	6
+#define CL_TENSION_BOW_DOWN	2
 
 
 #define COMMAND_OPEN 1
@@ -67,6 +67,7 @@ int SW1 = 0;
 int SW2 = 0;
 int SW3 = 0;
 int SW4 = 0;
+int display_switches = 0;
 
 int pin[6];
 int _pin[6];
@@ -109,43 +110,43 @@ void setup() {
             closing_state_cmds[i].motor_top_cmd = STOP;
             closing_state_cmds[i].motor_lid_cmd = STOP;
     }
-    opening_state_cmds[COVER_LOCKED].motor_top_cmd = STOP;
-    opening_state_cmds[COVER_LOCKED].motor_lid_cmd = COUNTERCLOCKWISE;
-    opening_state_cmds[COVER_UNLOCKED].motor_top_cmd = STOP;
-    opening_state_cmds[COVER_UNLOCKED].motor_lid_cmd = COUNTERCLOCKWISE;
-    opening_state_cmds[COVER_OPENED].motor_top_cmd = CLOCKWISE;
-    opening_state_cmds[COVER_OPENED].motor_lid_cmd = STOP;
-    opening_state_cmds[RAISING_TOP].motor_top_cmd = CLOCKWISE;
-    opening_state_cmds[RAISING_TOP].motor_lid_cmd = STOP;
-    opening_state_cmds[TENSION_BOW_UP].motor_top_cmd = STOP;
-    opening_state_cmds[TENSION_BOW_UP].motor_lid_cmd = CLOCKWISE;
-    opening_state_cmds[COVER_CLOSED].motor_top_cmd = STOP;
-    opening_state_cmds[COVER_CLOSED].motor_lid_cmd = CLOCKWISE;
-    opening_state_cmds[COVER_LOCKED].motor_top_cmd = COUNTERCLOCKWISE;
-    opening_state_cmds[COVER_LOCKED].motor_lid_cmd = STOP;
-    opening_state_cmds[TENSION_BOW_LOWERING].motor_top_cmd = COUNTERCLOCKWISE;
-    opening_state_cmds[TENSION_BOW_LOWERING].motor_lid_cmd = STOP;
-    opening_state_cmds[TENSION_BOW_DOWN].motor_top_cmd = STOP;
-    opening_state_cmds[TENSION_BOW_DOWN].motor_lid_cmd = STOP;
+    closing_state_cmds[CL_COVER_LOCKED].motor_top_cmd = STOP;
+    closing_state_cmds[CL_COVER_LOCKED].motor_lid_cmd = CLOCKWISE;
+    closing_state_cmds[CL_COVER_UNLOCKED].motor_top_cmd = STOP;
+    closing_state_cmds[CL_COVER_UNLOCKED].motor_lid_cmd = CLOCKWISE;
+    closing_state_cmds[CL_COVER_OPENED].motor_top_cmd = CLOCKWISE;
+    closing_state_cmds[CL_COVER_OPENED].motor_lid_cmd = STOP;
+    closing_state_cmds[CL_RAISING_TOP].motor_top_cmd = CLOCKWISE;
+    closing_state_cmds[CL_RAISING_TOP].motor_lid_cmd = STOP;
+    closing_state_cmds[CL_TENSION_BOW_ALL_UP].motor_top_cmd = STOP;
+    closing_state_cmds[CL_TENSION_BOW_ALL_UP].motor_lid_cmd = COUNTERCLOCKWISE;
+    closing_state_cmds[CL_COVER_CLOSING].motor_top_cmd = STOP;
+    closing_state_cmds[CL_COVER_CLOSING].motor_lid_cmd = COUNTERCLOCKWISE;
+    closing_state_cmds[CL_COVER_LOCKED].motor_top_cmd = COUNTERCLOCKWISE;
+    closing_state_cmds[CL_COVER_LOCKED].motor_lid_cmd = STOP;
+    closing_state_cmds[CL_TENSION_BOW_LOWERING].motor_top_cmd = COUNTERCLOCKWISE;
+    closing_state_cmds[CL_TENSION_BOW_LOWERING].motor_lid_cmd = STOP;
+    closing_state_cmds[CL_TENSION_BOW_DOWN].motor_top_cmd = STOP;
+    closing_state_cmds[CL_TENSION_BOW_DOWN].motor_lid_cmd = STOP;
 
-    closing_state_cmds[TOP_UNLOCKED_AND_LIFTED].motor_top_cmd = CLOCKWISE;
-    closing_state_cmds[TOP_UNLOCKED_AND_LIFTED].motor_lid_cmd = STOP;
-    closing_state_cmds[TENSION_BOW_RAISING].motor_top_cmd = CLOCKWISE;
-    closing_state_cmds[TENSION_BOW_RAISING].motor_lid_cmd = STOP;
-    closing_state_cmds[TENSION_BOW_ALL_UP].motor_top_cmd = STOP;
-    closing_state_cmds[TENSION_BOW_ALL_UP].motor_lid_cmd = COUNTERCLOCKWISE;
-    closing_state_cmds[COVER_UNLOCKED].motor_top_cmd = STOP;
-    closing_state_cmds[COVER_UNLOCKED].motor_lid_cmd = COUNTERCLOCKWISE;
-    closing_state_cmds[COVER_OPEN].motor_top_cmd = COUNTERCLOCKWISE;
-    closing_state_cmds[COVER_OPEN].motor_lid_cmd = STOP;
-    closing_state_cmds[TENSION_BOW_LOWERING].motor_top_cmd = COUNTERCLOCKWISE;
-    closing_state_cmds[TENSION_BOW_LOWERING].motor_lid_cmd = STOP;
-    closing_state_cmds[TOP_IN_COMPARTMENT].motor_top_cmd = STOP;
-    closing_state_cmds[TOP_IN_COMPARTMENT].motor_lid_cmd = CLOCKWISE;
-    closing_state_cmds[COVER_CLOSING].motor_top_cmd = STOP;
-    closing_state_cmds[COVER_CLOSING].motor_lid_cmd = CLOCKWISE;
-    closing_state_cmds[COVER_LOCKED].motor_top_cmd = STOP;
-    closing_state_cmds[COVER_LOCKED].motor_lid_cmd = STOP;
+    opening_state_cmds[OP_TOP_UNLOCKED_AND_LIFTED].motor_top_cmd = CLOCKWISE;
+    opening_state_cmds[OP_TOP_UNLOCKED_AND_LIFTED].motor_lid_cmd = STOP;
+    opening_state_cmds[OP_TENSION_BOW_RAISING].motor_top_cmd = CLOCKWISE;
+    opening_state_cmds[OP_TENSION_BOW_RAISING].motor_lid_cmd = STOP;
+    opening_state_cmds[OP_TENSION_BOW_ALL_UP].motor_top_cmd = STOP;
+    opening_state_cmds[OP_TENSION_BOW_ALL_UP].motor_lid_cmd = COUNTERCLOCKWISE;
+    opening_state_cmds[OP_COVER_UNLOCKED].motor_top_cmd = STOP;
+    opening_state_cmds[OP_COVER_UNLOCKED].motor_lid_cmd = COUNTERCLOCKWISE;
+    opening_state_cmds[OP_COVER_OPEN].motor_top_cmd = COUNTERCLOCKWISE;
+    opening_state_cmds[OP_COVER_OPEN].motor_lid_cmd = STOP;
+    opening_state_cmds[OP_TENSION_BOW_LOWERING].motor_top_cmd = COUNTERCLOCKWISE;
+    opening_state_cmds[OP_TENSION_BOW_LOWERING].motor_lid_cmd = STOP;
+    opening_state_cmds[OP_TOP_IN_COMPARTMENT].motor_top_cmd = STOP;
+    opening_state_cmds[OP_TOP_IN_COMPARTMENT].motor_lid_cmd = CLOCKWISE;
+    opening_state_cmds[OP_COVER_CLOSING].motor_top_cmd = STOP;
+    opening_state_cmds[OP_COVER_CLOSING].motor_lid_cmd = CLOCKWISE;
+    opening_state_cmds[OP_COVER_LOCKED].motor_top_cmd = STOP;
+    opening_state_cmds[OP_COVER_LOCKED].motor_lid_cmd = STOP;
 
     current_av_steps = 0;
     int j;
@@ -174,56 +175,12 @@ void loop ()
   
   if (current_state != old_state)
   {  
-    Serial << " new state is" << current_state<< "\n";
+    Serial << " ******  new state is --> " << current_state<< "\n";
     display_motor_command = 1;
   }
   old_state = current_state;
   
-  //Check for manual commands
-   if (Serial.available() > 0) 
-   {  
-      char rx_byte = Serial.read();       // get the character
-    
-      // check if a number was received
-      if ((rx_byte == 'x') || (rx_byte == 'X')) 
-      {
-        manual_commands =!manual_commands;
-        Serial << "switched to " << (manual_commands ? "manual" : "programmed") << "controls \n";
-      }
-      
-     if (manual_commands)
-     {
-      switch (rx_byte) 
-      {
-       case 'A':
-       case 'a': MotorTopClockwise(); MotorLidStop(); manual_counter = 10; break;
-       case 'Z':
-       case 'z': MotorTopCounterClockwise(); MotorLidStop();  manual_counter = 10; break;
-       case 'E':
-       case 'e': MotorTopStop(); MotorLidClockwise();  manual_counter = 10; break;
-       case 'R':
-       case 'r': MotorTopStop(); MotorLidCounterClockwise();  manual_counter = 10; break;
-       default :  MotorTopStop(); MotorLidStop(); manual_counter = 10; break; 
-      }
-        
-     }
-   }
-   
-   else 
-   { 
-      manual_counter --;
-      if (manual_counter < 0)
-        manual_counter= 0;
-     //if no keypressed and manual control, stop motion
-     if ((manual_commands)&&(manual_counter == 1))
-     {
-       MotorTopStop();
-       MotorLidStop();
-       manual_counter = 0;
-     }
-   }
-   
-  
+  ReadKeyboardCmds()  ;
   
    //Execute the actual power top control
   if (!manual_commands)
@@ -248,9 +205,10 @@ void ExecuteLogic()
     }
 
 
-    if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
+if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
     {
-        switch (opening_state_cmds[current_state].motor_top_cmd)
+      ///Serial << "OPENING " << current_state << " Top " <<     opening_state_cmds[current_state].motor_top_cmd << " Lid: " << opening_state_cmds[current_state].motor_lid_cmd  <<"\n";
+      switch (opening_state_cmds[current_state].motor_top_cmd)
         {
                 case STOP : MotorTopStop(); break;
                 case CLOCKWISE : MotorTopClockwise(); break;
@@ -268,19 +226,24 @@ void ExecuteLogic()
 
     if ((current_command == COMMAND_CLOSE)||(current_command == COMMAND_AUTO_CLOSE))
     {
+
+
+        //Serial << "CLOSING " << current_state << " Top " <<     closing_state_cmds[current_state].motor_top_cmd << " Lid: " << closing_state_cmds[current_state].motor_lid_cmd  <<"\n";      
         switch (closing_state_cmds[current_state].motor_top_cmd )
         {
-                case STOP : MotorTopStop(); break;
-                case CLOCKWISE : MotorTopClockwise(); break;
-                case COUNTERCLOCKWISE : MotorTopCounterClockwise(); break;
-                default : MotorTopStop();
+
+                case STOP : MotorTopStop();break;
+                case CLOCKWISE : MotorTopClockwise();  break;
+                case COUNTERCLOCKWISE : MotorTopCounterClockwise();  break;
+               // default : MotorTopStop();
         }
         switch (closing_state_cmds[current_state].motor_lid_cmd )
         {
-                case STOP : MotorLidStop(); break;
-                case CLOCKWISE : MotorLidClockwise(); break;
-                case COUNTERCLOCKWISE : MotorLidCounterClockwise(); break;
-                default : MotorLidStop();
+
+                case STOP : MotorLidStop();  break;
+                case CLOCKWISE : MotorLidClockwise();  break;
+                case COUNTERCLOCKWISE : MotorLidCounterClockwise();  break;
+                ///default : MotorLidStop();
         }
     }
 
@@ -423,8 +386,6 @@ void PollInputs()
 
 int ReadSwitchState()
 {
-    // Switches are inverted logic: high: open , low closed
-    // converted to 0 = open , 1 = close
     
     int sw1 = SW1;
     int sw2 = SW2;
@@ -442,8 +403,23 @@ int ReadSwitchState()
     SW2 = sw2;
     SW3 = sw3;
     SW4 = sw4;
-        
-    return (8*sw1 + 4*sw2 + 2*sw3 + sw4);
+
+if (display_switches )
+{
+  
+  Serial << "SW1: " << SW1 <<  " SW2: " << SW2<< " SW3: " << SW3 << " SW4: " << SW4 <<"\n";
+  display_switches = 0;
+  /*
+  int i;
+    for (i = 0; i<=15; i++)    
+        Serial << "OPENING " << i << " Top " <<     opening_state_cmds[i].motor_top_cmd << " Lid: " << opening_state_cmds[i].motor_lid_cmd  <<"\n";
+  for (i = 0; i<=15; i++)
+        Serial << "CLOSING " << i << " Top " <<     closing_state_cmds[i].motor_top_cmd << " Lid: " << closing_state_cmds[i].motor_lid_cmd  <<"\n";
+    */
+
+}
+  
+    return (8*SW1 + 4*SW2 + 2*SW3 + SW4);
 }
 
 void CheckTimeout()
@@ -507,7 +483,68 @@ int ReadUserCommand()
 }
 
 
-
+void ReadKeyboardCmds()
+{
+  
+    //Check for manual commands
+   if (Serial.available() > 0) 
+   {  
+      char rx_byte = Serial.read();       // get the character
+    
+      // check if manual command
+      if ((rx_byte == 'x') || (rx_byte == 'X')) 
+      {
+        manual_commands =!manual_commands;
+        Serial << "switched to " << (manual_commands ? "manual" : "programmed") << "controls \n";
+      }
+      
+      // Display state
+      if ((rx_byte == 's') || (rx_byte == 'S')) 
+      {
+        Serial << " ######  current state is --> " << current_state<< "\n";
+          current_state = ReadSwitchState();
+      }
+      
+      // ?
+      if (rx_byte == '?')  
+      {
+        display_switches = 1;
+      }
+   
+      
+     if (manual_commands)
+     {
+      switch (rx_byte) 
+      {
+       case 'A':
+       case 'a': MotorTopClockwise(); MotorLidStop(); manual_counter = 1000; break;
+       case 'Z':
+       case 'z': MotorTopCounterClockwise(); MotorLidStop();  manual_counter = 1000; break;
+       case 'E':
+       case 'e': MotorTopStop(); MotorLidClockwise();  manual_counter = 1000; break;
+       case 'R':
+       case 'r': MotorTopStop(); MotorLidCounterClockwise();  manual_counter = 1000; break;
+       default :  MotorTopStop(); MotorLidStop(); manual_counter = 10; break; 
+      }
+        
+     }
+   }
+   
+   else 
+   { 
+      manual_counter --;
+      if (manual_counter < 0)
+        manual_counter= 0;
+     //if no keypressed and manual control, stop motion
+     if ((manual_commands)&&(manual_counter == 1))
+     {
+       MotorTopStop();
+       MotorLidStop();
+       manual_counter = 0;
+     }
+   }
+   
+}
 
 
 
