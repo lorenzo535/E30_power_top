@@ -1,3 +1,5 @@
+
+
 #if ARDUINO >= 100 
   #include "Arduino.h"
 #else
@@ -5,7 +7,7 @@
 #endif
 
 #include <Streaming.h>
-#include <Switch.h>
+#include "Switch.h"
 #include "mystructs.h"
 
 #define  LidMotorSwitch1 6  //S3
