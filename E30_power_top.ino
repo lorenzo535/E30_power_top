@@ -33,21 +33,21 @@
 #define OP_TOP_UNLOCKED_AND_LIFTED	2
 #define OP_TENSION_BOW_RAISING  	6
 #define OP_TENSION_BOW_ALL_UP       	14
-#define OP_COVER_UNLOCKED		15
+#define OP_COVER_UNLOCKED		12
 #define OP_COVER_OPEN    		13
 #define OP_TENSION_BOW_LOWERING	       5
 #define OP_TOP_IN_COMPARTMENT	      1
-#define OP_COVER_CLOSING		11
-#define OP_COVER_LOCKED             10
+#define OP_COVER_CLOSING		0
+#define OP_COVER_LOCKED               2
 
 
 //ROOF CLOSING SEQUENCE STATES
-#define CL_COVER_LOCKED_STOWED  10
-#define CL_COVER_UNLOCKED	11
-#define CL_COVER_OPENED		9
+#define CL_COVER_LOCKED_STOWED  2
+#define CL_COVER_UNLOCKED	0
+#define CL_COVER_OPENED		1
 #define CL_RAISING_TOP		5
 #define CL_TENSION_BOW_ALL_UP	13
-#define CL_COVER_CLOSING	15
+#define CL_COVER_CLOSING	12
 #define CL_COVER_LOCKED	        14
 #define CL_TENSION_BOW_LOWERING	6
 #define CL_TENSION_BOW_DOWN	2
@@ -63,8 +63,8 @@ Switch InRoofOpen= Switch (ButtonRoofOpen, INPUT,LOW);
 Switch InRoofClose= Switch(ButtonRoofClose, INPUT,LOW);
 Switch InputSW1= Switch (TopMotorSwitch1, INPUT,LOW);
 Switch InputSW2= Switch (TopMotorSwitch2, INPUT,LOW);
-Switch InputSW3= Switch (LidMotorSwitch1, INPUT,LOW);
-Switch InputSW4= Switch (LidMotorSwitch2, INPUT,LOW);
+Switch InputSW3= Switch (LidMotorSwitch1, INPUT,HIGH);
+Switch InputSW4= Switch (LidMotorSwitch2, INPUT,HIGH);
 int SW1 = 0;
 int SW2 = 0;
 int SW3 = 0;
@@ -113,17 +113,17 @@ void setup() {
             closing_state_cmds[i].motor_lid_cmd = STOP;
     }
     closing_state_cmds[CL_COVER_LOCKED].motor_top_cmd = STOP;
-    closing_state_cmds[CL_COVER_LOCKED].motor_lid_cmd = CLOCKWISE;
+    closing_state_cmds[CL_COVER_LOCKED].motor_lid_cmd = COUNTERCLOCKWISE;
     closing_state_cmds[CL_COVER_UNLOCKED].motor_top_cmd = STOP;
-    closing_state_cmds[CL_COVER_UNLOCKED].motor_lid_cmd = CLOCKWISE;
+    closing_state_cmds[CL_COVER_UNLOCKED].motor_lid_cmd = COUNTERCLOCKWISE;
     closing_state_cmds[CL_COVER_OPENED].motor_top_cmd = CLOCKWISE;
     closing_state_cmds[CL_COVER_OPENED].motor_lid_cmd = STOP;
     closing_state_cmds[CL_RAISING_TOP].motor_top_cmd = CLOCKWISE;
     closing_state_cmds[CL_RAISING_TOP].motor_lid_cmd = STOP;
     closing_state_cmds[CL_TENSION_BOW_ALL_UP].motor_top_cmd = STOP;
-    closing_state_cmds[CL_TENSION_BOW_ALL_UP].motor_lid_cmd = COUNTERCLOCKWISE;
+    closing_state_cmds[CL_TENSION_BOW_ALL_UP].motor_lid_cmd =CLOCKWISE;
     closing_state_cmds[CL_COVER_CLOSING].motor_top_cmd = STOP;
-    closing_state_cmds[CL_COVER_CLOSING].motor_lid_cmd = COUNTERCLOCKWISE;
+    closing_state_cmds[CL_COVER_CLOSING].motor_lid_cmd = CLOCKWISE;
     closing_state_cmds[CL_COVER_LOCKED].motor_top_cmd = COUNTERCLOCKWISE;
     closing_state_cmds[CL_COVER_LOCKED].motor_lid_cmd = STOP;
     closing_state_cmds[CL_TENSION_BOW_LOWERING].motor_top_cmd = COUNTERCLOCKWISE;
