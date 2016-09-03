@@ -25,7 +25,7 @@
 
 #define CURRENT_AVERAGING_STEPS  8
 #define CURRENT_RANGE 20
-#define MAX_CURRENT 20
+#define MAX_CURRENT 14
 
 #define MV_TO_AMP (CURRENT_RANGE  )/ 2500
 #define MAX_MOTION_TIME_MS 	25000	//25 seconds
@@ -163,6 +163,10 @@ void setup() {
     {
         raw_current [j] = 0;
     }
+    
+    PollInputs();
+    display_switches = 1;
+    ReadSwitchState();
 
 }
 void loop ()
@@ -197,6 +201,7 @@ void loop ()
     CurrentProtection();
     CheckTimeout();
   }
+  
   display_motor_command = 0;
 
 }
@@ -262,7 +267,7 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
 void CurrentProtection()
 {
     int j;
-    raw_current [current_av_steps] = ADCValueToCurrent(analogRead(A1));
+    raw_current [current_av_steps] = ADCValueToCurrent(analogRead(A0));
     current_av_steps++;
 
     if (current_av_steps == CURRENT_AVERAGING_STEPS)
@@ -275,6 +280,16 @@ void CurrentProtection()
     average = average + raw_current [j];
     }
     average = average / CURRENT_AVERAGING_STEPS;
+/*
+  static int tt = 0;
+  if (tt >=3)
+  {
+  tt=0;
+             Serial << "current  " << fabs(average) << " (A) \n";  
+                       //  Serial << "A0  " << analogRead(A0) << " (A) \n";
+  }
+  tt++;
+*/
 
     if (fabs(average) >= MAX_CURRENT)
     {
@@ -412,12 +427,19 @@ int ReadSwitchState()
     SW2 = sw2;
     SW3 = sw3;
     SW4 = sw4;
+    
+     SW1 = !digitalRead(TopMotorSwitch1);
+    SW2 = !digitalRead(TopMotorSwitch2); 
+    SW3 = digitalRead(LidMotorSwitch1); 
+    SW4 =digitalRead(LidMotorSwitch2);
 
 if (display_switches )
 {
   
   Serial << "SW1: " << SW1 <<  " SW2: " << SW2<< " SW3: " << SW3 << " SW4: " << SW4 <<"\n";
+  Serial << "in1: " <<!digitalRead(TopMotorSwitch1) <<" in2: " <<!digitalRead(TopMotorSwitch2) <<" in3: " <<digitalRead(LidMotorSwitch1) <<" in4: " <<digitalRead(LidMotorSwitch2)<<"\n";
   display_switches = 0;
+
   /*
   int i;
     for (i = 0; i<=15; i++)    
