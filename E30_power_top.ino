@@ -90,9 +90,9 @@ int OldRoofClose, OldRoofOpen;
 
 void setup() {
 //Initialise board
-   pinMode(14, OUTPUT);
-   pinMode(15, OUTPUT);
-   pinMode(16, OUTPUT);
+   pinMode(11, OUTPUT);  //was pin 14
+   pinMode(12, OUTPUT);  //was pin 15
+   pinMode(13, OUTPUT);  //was pin 16
    pinMode(10, OUTPUT);
 
   /* pinMode(4, INPUT);
@@ -267,7 +267,7 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
 void CurrentProtection()
 {
     int j;
-    raw_current [current_av_steps] = ADCValueToCurrent(analogRead(A0));
+    raw_current [current_av_steps] = ADCValueToCurrent(analogRead(A7));
     current_av_steps++;
 
     if (current_av_steps == CURRENT_AVERAGING_STEPS)
