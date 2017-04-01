@@ -16,6 +16,11 @@
 #define  TopMotorSwitch1 4  //S1
 #define  TopMotorSwitch2 5  //S2
 
+#define MOTOR_LID_1 11
+#define MOTOR_LID_2 12
+#define MOTOR_TOP_1 13
+#define MOTOR_TOP_2 10
+
 #define ButtonRoofOpen 8
 #define ButtonRoofClose 7
 
@@ -90,10 +95,10 @@ int OldRoofClose, OldRoofOpen;
 
 void setup() {
 //Initialise board
-   pinMode(11, OUTPUT);  //was pin 14
-   pinMode(12, OUTPUT);  //was pin 15
-   pinMode(13, OUTPUT);  //was pin 16
-   pinMode(10, OUTPUT);
+   pinMode(MOTOR_LID_1, OUTPUT);  //was pin 14
+   pinMode(MOTOR_LID_2, OUTPUT);  //was pin 15
+   pinMode(MOTOR_TOP_1, OUTPUT);  //was pin 16
+   pinMode(MOTOR_TOP_2, OUTPUT);
 
   /* pinMode(4, INPUT);
    pinMode(5, INPUT);
@@ -291,7 +296,7 @@ void CurrentProtection()
   tt++;
 */
 
-    if (fabs(average) >= MAX_CURRENT)
+    if (0)//fabs(average) >= MAX_CURRENT)
     {
             current_command = COMMAND_IDLE;
             Serial << "##### current limit reached " << fabs(average) << " (A) \n";
@@ -328,43 +333,43 @@ void TestMotors()
 
 void MotorLidClockwise()
 {
-   digitalWrite(14, HIGH);
-   digitalWrite(15, LOW);
+   digitalWrite(MOTOR_LID_1, HIGH);  //14  #define MOTOR_LID_1 14
+   digitalWrite(MOTOR_LID_2, LOW); 
    if ((manual_commands)||(display_motor_command)) Serial << "MotorLid: clockwise \n";
 }
 
 void MotorLidCounterClockwise()
 {
-   digitalWrite(15, HIGH);
-   digitalWrite(14, LOW);
+   digitalWrite(MOTOR_LID_2, HIGH);
+   digitalWrite(MOTOR_LID_1, LOW);
    if ((manual_commands)||(display_motor_command)) Serial << "MotorLid: counter-clockwise \n";
 }
 
 void MotorLidStop()
 {
-   digitalWrite(14, LOW);
-   digitalWrite(15, LOW);
+   digitalWrite(MOTOR_LID_1, LOW);
+   digitalWrite(MOTOR_LID_2, LOW);
    if ((manual_commands)||(display_motor_command))Serial << "MotorLid: stop \n";
 }
 
 void MotorTopClockwise()
 {
-   digitalWrite(16, HIGH);
-   digitalWrite(10, LOW);
+   digitalWrite(MOTOR_TOP_1, HIGH);
+   digitalWrite(MOTOR_TOP_2, LOW);
    if ((manual_commands)||(display_motor_command)) Serial << "MotorTop: clockwise \n";
 }
 
 void MotorTopCounterClockwise()
 {
-   digitalWrite(10, HIGH);
-   digitalWrite(16, LOW);
+   digitalWrite(MOTOR_TOP_2, HIGH);
+   digitalWrite(MOTOR_TOP_1, LOW);
    if ((manual_commands)||(display_motor_command)) Serial << "MotorTop: counter-clockwise \n";   
 }
 
 void MotorTopStop()
 {
-   digitalWrite(10, LOW);
-   digitalWrite(16, LOW);
+   digitalWrite(MOTOR_TOP_2, LOW);
+   digitalWrite(MOTOR_TOP_1, LOW);
    if ((manual_commands)||(display_motor_command)) Serial << "MotorTop: stop \n";   
 }
 
