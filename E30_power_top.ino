@@ -33,7 +33,7 @@
 #define MAX_CURRENT 14
 
 #define MV_TO_AMP (CURRENT_RANGE  )/ 2500
-#define MAX_PHASE_MOTION_TIME_MS 	8000	//8 seconds
+#define MAX_PHASE_MOTION_TIME_MS 	6000	//6 seconds
 
 // ROOF OPENING SEQUENCE STATES
 #define OP_TOP_UNLOCKED_AND_LIFTED	2
@@ -52,7 +52,7 @@
 #define CL_COVER_LOCKED_STOWED  10
 #define CL_COVER_UNLOCKED	8
 #define CL_COVER_OPENED		9
-#define CL_RAISING_TOP		1
+#define CL_RAISING_TOP		1  
 #define CL_TOP_UP               5
 #define CL_TENSION_BOW_ALL_UP	13
 #define CL_COVER_CLOSING	12
@@ -242,7 +242,7 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
       {
         Serial << "### Forcing top in compartment \n";
         MotorTopCounterClockwise();
-        delay (150);
+        delay (300);
       }
       
       
@@ -475,8 +475,9 @@ if (display_switches )
 
 void CheckTimeout()
 {
-    unsigned long motion_time = millis() -phase_start_time;
-    if ( (current_command >= COMMAND_AUTO_OPEN) && (motion_time > MAX_PHASE_MOTION_TIME_MS  ) )
+    unsigned long _motion_time = millis() -phase_start_time;
+    unsigned long _max_phase_time = MAX_PHASE_MOTION_TIME_MS + (current_state == (CL_RAISING_TOP||OP_TOP_GOING_DOWN) ? 6000: 0);
+    if ( (current_command >= COMMAND_AUTO_OPEN) && (_motion_time > _max_phase_time ) )
     {
             current_command = COMMAND_IDLE;
             Serial << " ####  Phase timeout ###\n";
@@ -552,6 +553,15 @@ void ReadKeyboardCmds()
       {
         manual_commands =!manual_commands;
         Serial << "switched to " << (manual_commands ? "manual" : "programmed") << "controls \n";
+        if (manual_commands)
+        {
+        Serial << "MANUAL e,E : lid close; r,R lid open; a,A roof close; z,Z roof open ·\n";
+        Serial << "AUTO   >  roof close; <  roof open ·\n";
+        MotorLidStop();
+        MotorTopStop();
+        current_command = COMMAND_IDLE;
+        
+        }
       }
       
       // Display state
@@ -580,6 +590,9 @@ void ReadKeyboardCmds()
        case 'e': MotorTopStop(); MotorLidClockwise();  manual_counter = 1000; break;
        case 'R':
        case 'r': MotorTopStop(); MotorLidCounterClockwise();  manual_counter = 1000; break;
+       case '<': Serial << ">>> Auto OPEN\n"; manual_commands = false; current_command = COMMAND_AUTO_OPEN; phase_start_time = millis();break;
+       case '>': Serial << "<<< Auto CLOSE\n"; manual_commands = false; current_command = COMMAND_AUTO_CLOSE; phase_start_time = millis();break;
+       
        default :  MotorTopStop(); MotorLidStop(); manual_counter = 10; break; 
       }
         
