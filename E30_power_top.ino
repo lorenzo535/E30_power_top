@@ -28,12 +28,13 @@
 #define STOP	0
 #define COUNTERCLOCKWISE 2
 
-#define CURRENT_AVERAGING_STEPS  8
+#define CURRENT_AVERAGING_STEPS  40
 #define CURRENT_RANGE 20
 #define MAX_CURRENT 14
 
 #define MV_TO_AMP (CURRENT_RANGE  )/ 2500
-#define MAX_MOTION_TIME_MS 	25000	//25 seconds
+#define MAX_PHASE_MOTION_TIME_MS 	8000	//8 seconds
+
 // ROOF OPENING SEQUENCE STATES
 #define OP_TOP_UNLOCKED_AND_LIFTED	2
 #define OP_TENSION_BOW_RAISING  	6
@@ -86,9 +87,11 @@ OutputCmd opening_state_cmds[16];
 OutputCmd closing_state_cmds[16];
 int current_state, old_state;
 int  display_motor_command = 0;
+int state_just_changed = 0;
 int current_command, old_command;
 float raw_current[CURRENT_AVERAGING_STEPS];
 unsigned long motion_start_time;
+unsigned long phase_start_time;
 int manual_commands = 0;
 int manual_counter = 1;
 int OldRoofClose, OldRoofOpen;
@@ -177,8 +180,10 @@ void setup() {
 void loop ()
 {
 
+  
   //Read inputs
   PollInputs();
+  //ShowCurrent();
   
     current_command = ReadUserCommand();
     if (old_command != current_command)
@@ -194,8 +199,10 @@ void loop ()
   {  
     Serial << " ******  new state is --> " << current_state<< "\n";
     display_motor_command = 1;
+    state_just_changed = 3;
+    phase_start_time = millis();
   }
-  old_state = current_state;
+  //old_state = current_state;
   
   ReadKeyboardCmds()  ;
   
@@ -203,10 +210,14 @@ void loop ()
   if (!manual_commands)
   {   
     ExecuteLogic();
-    CurrentProtection();
+    if (!state_just_changed)
+      CurrentProtection();
+    if (state_just_changed > 0)
+    state_just_changed--;
     CheckTimeout();
+    
   }
-  
+  old_state = current_state;  
   display_motor_command = 0;
 
 }
@@ -225,6 +236,17 @@ void ExecuteLogic()
 
 if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
     {
+    
+      //Force top in compartment
+      if((old_state == OP_TOP_GOING_DOWN)&& (current_state == OP_TOP_IN_COMPARTMENT))
+      {
+        Serial << "### Forcing top in compartment \n";
+        MotorTopCounterClockwise();
+        delay (150);
+      }
+      
+      
+      
       ///Serial << "OPENING " << current_state << " Top " <<     opening_state_cmds[current_state].motor_top_cmd << " Lid: " << opening_state_cmds[current_state].motor_lid_cmd  <<"\n";
       switch (opening_state_cmds[current_state].motor_top_cmd)
         {
@@ -272,7 +294,8 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
 void CurrentProtection()
 {
     int j;
-    raw_current [current_av_steps] = ADCValueToCurrent(analogRead(A7));
+    int anain = analogRead(7);
+    raw_current [current_av_steps] =ADCValueToCurrent(anain) ;
     current_av_steps++;
 
     if (current_av_steps == CURRENT_AVERAGING_STEPS)
@@ -285,18 +308,10 @@ void CurrentProtection()
     average = average + raw_current [j];
     }
     average = average / CURRENT_AVERAGING_STEPS;
-/*
-  static int tt = 0;
-  if (tt >=3)
-  {
-  tt=0;
-             Serial << "current  " << fabs(average) << " (A) \n";  
-                       //  Serial << "A0  " << analogRead(A0) << " (A) \n";
-  }
-  tt++;
-*/
 
-    if (0)//fabs(average) >= MAX_CURRENT)
+  //  Serial <<"ana in " << anain << " current  " << ADCValueToCurrent(anain) << " (A) \n";  
+
+    if (fabs(average) >= MAX_CURRENT)
     {
             current_command = COMMAND_IDLE;
             Serial << "##### current limit reached " << fabs(average) << " (A) \n";
@@ -433,7 +448,7 @@ int ReadSwitchState()
     SW3 = sw3;
     SW4 = sw4;
     
-     SW1 = !digitalRead(TopMotorSwitch1);
+    SW1 = !digitalRead(TopMotorSwitch1);
     SW2 = !digitalRead(TopMotorSwitch2); 
     SW3 = digitalRead(LidMotorSwitch1); 
     SW4 =digitalRead(LidMotorSwitch2);
@@ -460,9 +475,12 @@ if (display_switches )
 
 void CheckTimeout()
 {
-    unsigned long motion_time = millis() -motion_start_time;
-    if ( (current_command >= COMMAND_AUTO_OPEN) && (motion_time > MAX_MOTION_TIME_MS  ) )
+    unsigned long motion_time = millis() -phase_start_time;
+    if ( (current_command >= COMMAND_AUTO_OPEN) && (motion_time > MAX_PHASE_MOTION_TIME_MS  ) )
+    {
             current_command = COMMAND_IDLE;
+            Serial << " ####  Phase timeout ###\n";
+    }
 }
 
 
@@ -488,6 +506,7 @@ int ReadUserCommand()
     if ((current_command == COMMAND_OPEN) &&  ((millis()-motion_start_time) <= 200))
     {
                       motion_start_time = millis();
+                      phase_start_time = motion_start_time;
                       output_command= COMMAND_AUTO_OPEN;
                                           Serial << "command_auto_open\n";
                     }
@@ -507,6 +526,7 @@ int ReadUserCommand()
     if ((current_command == COMMAND_CLOSE) &&  ((millis()-motion_start_time) <= 200))
     {
                       motion_start_time = millis();
+                      phase_start_time = motion_start_time;
                       output_command= COMMAND_AUTO_CLOSE;
                                           Serial << "command_auto_close\n";
                     }
@@ -584,7 +604,19 @@ void ReadKeyboardCmds()
 
 
 
+void ShowCurrent()
+{
+  static int tt = 0;
+  int anain = analogRead(7);
+  if (tt >=1000)
+  {
+  tt=0;
+  Serial <<"ana in " << anain << " current  " << ADCValueToCurrent(anain) << " (A) \n";  
+ 
+  }
+  tt++;
 
+}
 
 
 
