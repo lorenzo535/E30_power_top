@@ -18,7 +18,7 @@
 
 #define MOTOR_LID_1 11
 #define MOTOR_LID_2 12
-#define MOTOR_TOP_1 13
+#define MOTOR_TOP_1 3  //was 13
 #define MOTOR_TOP_2 10
 
 #define ButtonRoofOpen 8
@@ -33,7 +33,7 @@
 #define MAX_CURRENT 14
 
 #define MV_TO_AMP (CURRENT_RANGE  )/ 2500
-#define MAX_PHASE_MOTION_TIME_MS 	6000	//6 seconds
+#define MAX_PHASE_MOTION_TIME_MS 	7000	//7 seconds
 
 // ROOF OPENING SEQUENCE STATES
 #define OP_TOP_UNLOCKED_AND_LIFTED	2
@@ -102,6 +102,8 @@ void setup() {
    pinMode(MOTOR_LID_2, OUTPUT);  //was pin 15
    pinMode(MOTOR_TOP_1, OUTPUT);  //was pin 16
    pinMode(MOTOR_TOP_2, OUTPUT);
+   MotorTopStop();
+   MotorLidStop();
 
   /* pinMode(4, INPUT);
    pinMode(5, INPUT);
@@ -242,7 +244,7 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
       {
         Serial << "### Forcing top in compartment \n";
         MotorTopCounterClockwise();
-        delay (300);
+        delay (100);
       }
       
       
