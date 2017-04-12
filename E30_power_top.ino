@@ -28,11 +28,11 @@
 #define STOP	0
 #define COUNTERCLOCKWISE 2
 
-#define CURRENT_AVERAGING_STEPS  40
+#define CURRENT_AVERAGING_STEPS  20
 #define CURRENT_RANGE 20
-#define MAX_CURRENT 14
+#define MAX_CURRENT 10
 
-#define MV_TO_AMP (CURRENT_RANGE  )/ 2500
+#define MV_PER_AMP 100
 #define MAX_PHASE_MOTION_TIME_MS 	7000	//7 seconds
 
 // ROOF OPENING SEQUENCE STATES
@@ -179,13 +179,23 @@ void setup() {
     ReadSwitchState();
 
 }
+void resetCurrentAverage()
+{
+  int j;
+  for (j = 0; j < CURRENT_AVERAGING_STEPS; j++)
+    {
+        raw_current [j] = 0;
+    }
+    current_av_steps = 0;
+}
+
 void loop ()
 {
 
   
   //Read inputs
   PollInputs();
-  //ShowCurrent();
+  ShowCurrent();
   
     current_command = ReadUserCommand();
     if (old_command != current_command)
@@ -201,8 +211,9 @@ void loop ()
   {  
     Serial << " ******  new state is --> " << current_state<< "\n";
     display_motor_command = 1;
-    state_just_changed = 3;
+    state_just_changed = 10;
     phase_start_time = millis();
+    resetCurrentAverage();
   }
   //old_state = current_state;
   
@@ -212,12 +223,13 @@ void loop ()
   if (!manual_commands)
   {   
     ExecuteLogic();
-    if (!state_just_changed)
+   
+    if (state_just_changed == 0)
       CurrentProtection();
-    if (state_just_changed > 0)
-    state_just_changed--;
-    CheckTimeout();
-    
+    if (state_just_changed > 0)    
+      state_just_changed--;
+      
+      CheckTimeout();       
   }
   old_state = current_state;  
   display_motor_command = 0;
@@ -295,12 +307,14 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
 
 void CurrentProtection()
 {
+
+      
     int j;
     int anain = analogRead(7);
     raw_current [current_av_steps] =ADCValueToCurrent(anain) ;
     current_av_steps++;
 
-    if (current_av_steps == CURRENT_AVERAGING_STEPS)
+    if (current_av_steps >= CURRENT_AVERAGING_STEPS)
         current_av_steps = 0;
 
     //compute average
@@ -318,6 +332,7 @@ void CurrentProtection()
             current_command = COMMAND_IDLE;
             Serial << "##### current limit reached " << fabs(average) << " (A) \n";
     }
+  
 
 }
 
@@ -415,7 +430,7 @@ float ADCValueToCurrent (long int adc_in)
 {
   float mv = (adc_in / 1023.0) * 5000;
 
-  return (mv - 2500) * MV_TO_AMP;
+  return (mv - 2500) / MV_PER_AMP;
 
 }
 
