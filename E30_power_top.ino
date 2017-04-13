@@ -30,7 +30,7 @@
 
 #define CURRENT_AVERAGING_STEPS  20
 #define CURRENT_RANGE 20
-#define MAX_CURRENT 10
+#define MAX_CURRENT 18
 
 #define MV_PER_AMP 100
 #define MAX_PHASE_MOTION_TIME_MS 	7000	//7 seconds
@@ -211,9 +211,11 @@ void loop ()
   {  
     Serial << " ******  new state is --> " << current_state<< "\n";
     display_motor_command = 1;
-    state_just_changed = 10;
+    state_just_changed = 30;
+    //StopALittle();
     phase_start_time = millis();
     resetCurrentAverage();
+    
   }
   //old_state = current_state;
   
@@ -226,14 +228,24 @@ void loop ()
    
     if (state_just_changed == 0)
       CurrentProtection();
-    if (state_just_changed > 0)    
+    if (state_just_changed > 0)  
+    { 
+      Serial << state_just_changed <<"\n"; 
       state_just_changed--;
+    }
       
       CheckTimeout();       
   }
   old_state = current_state;  
   display_motor_command = 0;
+ 
+}
 
+void StopALittle()
+{
+  MotorTopStop();
+  MotorLidStop();
+  delay (500);
 }
 
 
@@ -252,12 +264,14 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
     {
     
       //Force top in compartment
-      if((old_state == OP_TOP_GOING_DOWN)&& (current_state == OP_TOP_IN_COMPARTMENT))
+      /* 
+       if((old_state == OP_TOP_GOING_DOWN)&& (current_state == OP_TOP_IN_COMPARTMENT))
       {
         Serial << "### Forcing top in compartment \n";
         MotorTopCounterClockwise();
         delay (100);
       }
+      */
       
       
       
@@ -307,7 +321,14 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
 
 void CurrentProtection()
 {
+   static int skip =0;
 
+   skip++;
+   if (skip >= 40)
+      skip = 0;
+    else
+      return;
+  
       
     int j;
     int anain = analogRead(7);
@@ -428,9 +449,11 @@ void ReadAndDisplayInputs()
 
 float ADCValueToCurrent (long int adc_in)
 {
-  float mv = (adc_in / 1023.0) * 5000;
+ 
+ float temp = adc_in;
+ float mv = (temp / 1023.0) * 5000.0;
 
-  return (mv - 2500) / MV_PER_AMP;
+  return ((mv - 2500) / MV_PER_AMP);
 
 }
 
