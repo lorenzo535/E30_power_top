@@ -28,10 +28,10 @@
 #define STOP	0
 #define COUNTERCLOCKWISE 2
 
-#define CURRENT_AVERAGING_STEPS  20
+#define CURRENT_AVERAGING_STEPS  10
 #define CURRENT_RANGE 20
-#define MAX_CURRENT 18
-
+#define MAX_CURRENT 14
+#define STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS 10
 #define MV_PER_AMP 100
 #define MAX_PHASE_MOTION_TIME_MS 	7000	//7 seconds
 
@@ -195,7 +195,7 @@ void loop ()
   
   //Read inputs
   PollInputs();
-  ShowCurrent();
+  //ShowCurrent();
   
     current_command = ReadUserCommand();
     if (old_command != current_command)
@@ -211,7 +211,7 @@ void loop ()
   {  
     Serial << " ******  new state is --> " << current_state<< "\n";
     display_motor_command = 1;
-    state_just_changed = 30;
+    state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;
     //StopALittle();
     phase_start_time = millis();
     resetCurrentAverage();
@@ -321,14 +321,15 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
 
 void CurrentProtection()
 {
+  
+/*
    static int skip =0;
-
    skip++;
    if (skip >= 40)
       skip = 0;
     else
       return;
-  
+*/  
       
     int j;
     int anain = analogRead(7);
@@ -549,6 +550,7 @@ int ReadUserCommand()
                       motion_start_time = millis();
                       phase_start_time = motion_start_time;
                       output_command= COMMAND_AUTO_OPEN;
+                      state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;
                                           Serial << "command_auto_open\n";
                     }
                      else {
@@ -559,7 +561,7 @@ int ReadUserCommand()
   
   if(InRoofClose.pushed()) {
                     motion_start_time = millis();
-                    output_command = COMMAND_CLOSE;
+                    output_command = COMMAND_CLOSE;                    
                     Serial << "command_close\n";
   }
   if(InRoofClose.released()) 
@@ -569,6 +571,7 @@ int ReadUserCommand()
                       motion_start_time = millis();
                       phase_start_time = motion_start_time;
                       output_command= COMMAND_AUTO_CLOSE;
+                      state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;
                                           Serial << "command_auto_close\n";
                     }
                      else {
@@ -630,8 +633,8 @@ void ReadKeyboardCmds()
        case 'e': MotorTopStop(); MotorLidClockwise();  manual_counter = 1000; break;
        case 'R':
        case 'r': MotorTopStop(); MotorLidCounterClockwise();  manual_counter = 1000; break;
-       case '<': Serial << ">>> Auto OPEN\n"; manual_commands = false; current_command = COMMAND_AUTO_OPEN; phase_start_time = millis();break;
-       case '>': Serial << "<<< Auto CLOSE\n"; manual_commands = false; current_command = COMMAND_AUTO_CLOSE; phase_start_time = millis();break;
+       case '<': Serial << ">>> Auto OPEN\n"; manual_commands = false; current_command = COMMAND_AUTO_OPEN; phase_start_time = millis();state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;break;
+       case '>': Serial << "<<< Auto CLOSE\n"; manual_commands = false; current_command = COMMAND_AUTO_CLOSE; phase_start_time = millis();state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;break;
        
        default :  MotorTopStop(); MotorLidStop(); manual_counter = 10; break; 
       }
