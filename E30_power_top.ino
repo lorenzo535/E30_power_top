@@ -30,7 +30,10 @@
 
 #define CURRENT_AVERAGING_STEPS  10
 #define CURRENT_RANGE 20
-#define MAX_CURRENT 14
+#define MAX_CURRENT 12
+#define MAX_CURRENT_MANUAL 18 
+#define MAX_CURRENT_EXTRA_LIMIT 4
+#define MAX_CURRENT_EXTRA_LIMIT_2 2
 #define STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS 10
 #define MV_PER_AMP 100
 #define MAX_PHASE_MOTION_TIME_MS 	7000	//7 seconds
@@ -263,18 +266,7 @@ void ExecuteLogic()
 if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
     {
     
-      //Force top in compartment
-      /* 
-       if((old_state == OP_TOP_GOING_DOWN)&& (current_state == OP_TOP_IN_COMPARTMENT))
-      {
-        Serial << "### Forcing top in compartment \n";
-        MotorTopCounterClockwise();
-        delay (100);
-      }
-      */
-      
-      
-      
+         
       ///Serial << "OPENING " << current_state << " Top " <<     opening_state_cmds[current_state].motor_top_cmd << " Lid: " << opening_state_cmds[current_state].motor_lid_cmd  <<"\n";
       switch (opening_state_cmds[current_state].motor_top_cmd)
         {
@@ -322,15 +314,7 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
 void CurrentProtection()
 {
   
-/*
-   static int skip =0;
-   skip++;
-   if (skip >= 40)
-      skip = 0;
-    else
-      return;
-*/  
-      
+    
     int j;
     int anain = analogRead(7);
     raw_current [current_av_steps] =ADCValueToCurrent(anain) ;
@@ -349,7 +333,21 @@ void CurrentProtection()
 
   //  Serial <<"ana in " << anain << " current  " << ADCValueToCurrent(anain) << " (A) \n";  
 
-    if (fabs(average) >= MAX_CURRENT)
+    
+   float current_limit = MAX_CURRENT_MANUAL;
+   if (current_command >= COMMAND_AUTO_OPEN)
+      current_limit = MAX_CURRENT;
+    
+    if (current_command == COMMAND_AUTO_OPEN)
+    {
+      if((current_state ==OP_TENSION_BOW_RAISING)||(current_state==OP_COVER_CLOSING))
+	      current_limit += MAX_CURRENT_EXTRA_LIMIT;
+      if(current_state ==OP_TENSION_BOW_RAISING)
+        current_limit += MAX_CURRENT_EXTRA_LIMIT_2;
+    }
+ 
+
+    if (fabs(average) >= current_limit)
     {
             current_command = COMMAND_IDLE;
             Serial << "##### current limit reached " << fabs(average) << " (A) \n";
