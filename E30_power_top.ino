@@ -1,4 +1,5 @@
-
+//ACTUAL BOARD:
+//ARDUINO NANO
 
 #if ARDUINO >= 100 
   #include "Arduino.h"
@@ -32,7 +33,7 @@
 #define CURRENT_RANGE 20
 #define MAX_CURRENT 12
 #define MAX_CURRENT_MANUAL 18 
-#define MAX_CURRENT_EXTRA_LIMIT 4
+#define MAX_CURRENT_EXTRA_LIMIT 6
 #define MAX_CURRENT_EXTRA_LIMIT_2 2
 #define STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS 10
 #define MV_PER_AMP 100
@@ -340,9 +341,9 @@ void CurrentProtection()
     
     if (current_command == COMMAND_AUTO_OPEN)
     {
-      if((current_state ==OP_TENSION_BOW_RAISING)||(current_state==OP_COVER_CLOSING))
+      if((current_state==OP_COVER_CLOSING)||(CL_COVER_CLOSING))
 	      current_limit += MAX_CURRENT_EXTRA_LIMIT;
-      if(current_state ==OP_TENSION_BOW_RAISING)
+      if((current_state ==OP_TENSION_BOW_RAISING)||(current_state ==OP_TENSION_BOW_RAISING))
         current_limit += MAX_CURRENT_EXTRA_LIMIT_2;
     }
  
