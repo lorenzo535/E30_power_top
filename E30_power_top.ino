@@ -33,7 +33,7 @@
 #define CURRENT_RANGE 20
 #define MAX_CURRENT 12
 #define MAX_CURRENT_MANUAL 18 
-#define MAX_CURRENT_EXTRA_LIMIT 6
+#define MAX_CURRENT_EXTRA_LIMIT 4
 #define MAX_CURRENT_EXTRA_LIMIT_2 2
 #define STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS 10
 #define MV_PER_AMP 100
@@ -82,6 +82,7 @@ int SW2 = 0;
 int SW3 = 0;
 int SW4 = 0;
 int display_switches = 0;
+int allow_lid_repeat_closing = 1;
 
 int pin[6];
 int _pin[6];
@@ -91,7 +92,6 @@ OutputCmd opening_state_cmds[16];
 OutputCmd closing_state_cmds[16];
 int current_state, old_state;
 int  display_motor_command = 0;
-int state_just_changed = 0;
 int current_command, old_command;
 float raw_current[CURRENT_AVERAGING_STEPS];
 unsigned long motion_start_time;
@@ -215,10 +215,10 @@ void loop ()
   {  
     Serial << " ******  new state is --> " << current_state<< "\n";
     display_motor_command = 1;
-    state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;
     //StopALittle();
     phase_start_time = millis();
     resetCurrentAverage();
+    allow_lid_repeat_closing = 1;
     
   }
   //old_state = current_state;
@@ -230,13 +230,9 @@ void loop ()
   {   
     ExecuteLogic();
    
-    if (state_just_changed == 0)
+
       CurrentProtection();
-    if (state_just_changed > 0)  
-    { 
-      Serial << state_just_changed <<"\n"; 
-      state_just_changed--;
-    }
+
       
       CheckTimeout();       
   }
@@ -314,8 +310,7 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
 
 void CurrentProtection()
 {
-  
-    
+      
     int j;
     int anain = analogRead(7);
     raw_current [current_av_steps] =ADCValueToCurrent(anain) ;
@@ -350,13 +345,27 @@ void CurrentProtection()
 
     if (fabs(average) >= current_limit)
     {
+            if (current_state == OP_COVER_CLOSING)
+                if (allow_lid_repeat_closing)
+                TryAndCloseLidAgain();           
+
             current_command = COMMAND_IDLE;
             Serial << "##### current limit reached " << fabs(average) << " (A) \n";
     }
   
-
 }
 
+
+void TryAndCloseLidAgain()
+{
+    allow_lid_repeat_closing = 0;
+    MotorLidStop();
+    delay (1000);
+    MotorLidCounterClockwise();
+    delay(3000);
+    MotorLidStop();
+    current_state = OP_COVER_CLOSING;
+}
 
 
 void TestMotors()
@@ -548,8 +557,7 @@ int ReadUserCommand()
     {
                       motion_start_time = millis();
                       phase_start_time = motion_start_time;
-                      output_command= COMMAND_AUTO_OPEN;
-                      state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;
+                      output_command= COMMAND_AUTO_OPEN;                      
                                           Serial << "command_auto_open\n";
                     }
                      else {
@@ -569,8 +577,7 @@ int ReadUserCommand()
     {
                       motion_start_time = millis();
                       phase_start_time = motion_start_time;
-                      output_command= COMMAND_AUTO_CLOSE;
-                      state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;
+                      output_command= COMMAND_AUTO_CLOSE;                      
                                           Serial << "command_auto_close\n";
                     }
                      else {
@@ -632,8 +639,8 @@ void ReadKeyboardCmds()
        case 'e': MotorTopStop(); MotorLidClockwise();  manual_counter = 1000; break;
        case 'R':
        case 'r': MotorTopStop(); MotorLidCounterClockwise();  manual_counter = 1000; break;
-       case '<': Serial << ">>> Auto OPEN\n"; manual_commands = false; current_command = COMMAND_AUTO_OPEN; phase_start_time = millis();state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;break;
-       case '>': Serial << "<<< Auto CLOSE\n"; manual_commands = false; current_command = COMMAND_AUTO_CLOSE; phase_start_time = millis();state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;break;
+       case '<': Serial << ">>> Auto OPEN\n"; manual_commands = false; current_command = COMMAND_AUTO_OPEN; phase_start_time = millis();break;
+       case '>': Serial << "<<< Auto CLOSE\n"; manual_commands = false; current_command = COMMAND_AUTO_CLOSE; phase_start_time = millis();break;
        
        default :  MotorTopStop(); MotorLidStop(); manual_counter = 10; break; 
       }
