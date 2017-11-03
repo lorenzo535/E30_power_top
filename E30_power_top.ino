@@ -82,6 +82,7 @@ int SW2 = 0;
 int SW3 = 0;
 int SW4 = 0;
 int display_switches = 0;
+int state_just_changed = 1;
 int allow_lid_repeat_closing = 1;
 
 int pin[6];
@@ -215,6 +216,7 @@ void loop ()
   {  
     Serial << " ******  new state is --> " << current_state<< "\n";
     display_motor_command = 1;
+    state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;
     //StopALittle();
     phase_start_time = millis();
     resetCurrentAverage();
@@ -230,9 +232,13 @@ void loop ()
   {   
     ExecuteLogic();
    
-
+    if (state_just_changed == 0)
       CurrentProtection();
-
+    if (state_just_changed > 0)  
+    { 
+      Serial << state_just_changed <<"\n"; 
+      state_just_changed--;
+    }
       
       CheckTimeout();       
   }
@@ -310,7 +316,8 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
 
 void CurrentProtection()
 {
-      
+  
+    
     int j;
     int anain = analogRead(7);
     raw_current [current_av_steps] =ADCValueToCurrent(anain) ;
@@ -362,8 +369,10 @@ void TryAndCloseLidAgain()
     MotorLidStop();
     delay (1000);
     MotorLidCounterClockwise();
-    delay(3000);
+    delay(1500);
     MotorLidStop();
+    delay(1000);
+    MotorLidClockwise();
     current_state = OP_COVER_CLOSING;
 }
 
@@ -557,7 +566,8 @@ int ReadUserCommand()
     {
                       motion_start_time = millis();
                       phase_start_time = motion_start_time;
-                      output_command= COMMAND_AUTO_OPEN;                      
+                      output_command= COMMAND_AUTO_OPEN;
+                      state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;
                                           Serial << "command_auto_open\n";
                     }
                      else {
@@ -577,7 +587,8 @@ int ReadUserCommand()
     {
                       motion_start_time = millis();
                       phase_start_time = motion_start_time;
-                      output_command= COMMAND_AUTO_CLOSE;                      
+                      output_command= COMMAND_AUTO_CLOSE;
+                      state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;
                                           Serial << "command_auto_close\n";
                     }
                      else {
@@ -639,8 +650,8 @@ void ReadKeyboardCmds()
        case 'e': MotorTopStop(); MotorLidClockwise();  manual_counter = 1000; break;
        case 'R':
        case 'r': MotorTopStop(); MotorLidCounterClockwise();  manual_counter = 1000; break;
-       case '<': Serial << ">>> Auto OPEN\n"; manual_commands = false; current_command = COMMAND_AUTO_OPEN; phase_start_time = millis();break;
-       case '>': Serial << "<<< Auto CLOSE\n"; manual_commands = false; current_command = COMMAND_AUTO_CLOSE; phase_start_time = millis();break;
+       case '<': Serial << ">>> Auto OPEN\n"; manual_commands = false; current_command = COMMAND_AUTO_OPEN; phase_start_time = millis();state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;break;
+       case '>': Serial << "<<< Auto CLOSE\n"; manual_commands = false; current_command = COMMAND_AUTO_CLOSE; phase_start_time = millis();state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;break;
        
        default :  MotorTopStop(); MotorLidStop(); manual_counter = 10; break; 
       }
