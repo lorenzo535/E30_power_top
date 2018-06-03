@@ -32,6 +32,7 @@
 #define CURRENT_AVERAGING_STEPS  10
 #define CURRENT_RANGE 20
 #define MAX_CURRENT 12
+#define CURRENT_LIMIT_ROOF_LIFTING 9
 #define MAX_CURRENT_MANUAL 18 
 #define MAX_CURRENT_EXTRA_LIMIT 4
 #define MAX_CURRENT_EXTRA_LIMIT_2 2
@@ -100,6 +101,7 @@ unsigned long phase_start_time;
 int manual_commands = 0;
 int manual_counter = 1;
 int OldRoofClose, OldRoofOpen;
+int show_current_measure;
 
 void setup() {
 //Initialise board
@@ -181,6 +183,7 @@ void setup() {
     
     PollInputs();
     display_switches = 1;
+    show_current_measure = 0;
     ReadSwitchState();
 
 }
@@ -317,7 +320,7 @@ if ((current_command == COMMAND_OPEN)||(current_command == COMMAND_AUTO_OPEN))
 void CurrentProtection()
 {
   
-    
+    static int skip = 0;
     int j;
     int anain = analogRead(7);
     raw_current [current_av_steps] =ADCValueToCurrent(anain) ;
@@ -337,18 +340,39 @@ void CurrentProtection()
   //  Serial <<"ana in " << anain << " current  " << ADCValueToCurrent(anain) << " (A) \n";  
 
     
-   float current_limit = MAX_CURRENT_MANUAL;
-   if (current_command >= COMMAND_AUTO_OPEN)
-      current_limit = MAX_CURRENT;
+   float current_limit = MAX_CURRENT;
+
+  if ((current_command == COMMAND_OPEN ) || (current_command == COMMAND_CLOSE ))
+  float current_limit = MAX_CURRENT_MANUAL;
+
     
     if (current_command == COMMAND_AUTO_OPEN)
     {
       if((current_state==OP_COVER_CLOSING)||(CL_COVER_CLOSING))
-	      current_limit += MAX_CURRENT_EXTRA_LIMIT;
-      if((current_state ==OP_TENSION_BOW_RAISING)||(current_state ==OP_TENSION_BOW_RAISING))
-        current_limit += MAX_CURRENT_EXTRA_LIMIT_2;
+	      current_limit = MAX_CURRENT + MAX_CURRENT_EXTRA_LIMIT;
+      else if((current_state ==OP_TENSION_BOW_RAISING)||(current_state ==OP_TENSION_BOW_RAISING))
+        current_limit = MAX_CURRENT + MAX_CURRENT_EXTRA_LIMIT_2;
+       else
+       current_limit = MAX_CURRENT;
     }
- 
+
+  if (current_command == COMMAND_AUTO_CLOSE)
+    if(current_state==CL_RAISING_TOP    )
+       current_limit  = CURRENT_LIMIT_ROOF_LIFTING;
+     else if(current_state == CL_TOP_UP)
+       current_limit = MAX_CURRENT + MAX_CURRENT_EXTRA_LIMIT;
+       else
+        current_limit = MAX_CURRENT;
+   
+ if (show_current_measure)
+ {
+   if (skip >= 3)
+   {
+       Serial << " current measure " << fabs(average) << " (A)  LIMIT : " << current_limit << "\n";
+       skip = 0;
+   }
+   skip = skip+1;
+ }
 
     if (fabs(average) >= current_limit)
     {
@@ -636,7 +660,13 @@ void ReadKeyboardCmds()
       {
         display_switches = 1;
       }
-   
+
+   // Display current
+      if ((rx_byte == 'c') || (rx_byte == 'C')) 
+      {
+        show_current_measure = ! show_current_measure;
+          
+      }
       
      if (manual_commands)
      {
