@@ -33,9 +33,9 @@
 #define CURRENT_RANGE 20
 #define MAX_CURRENT 12
 #define CURRENT_LIMIT_ROOF_LIFTING 9
-#define MAX_CURRENT_MANUAL 18 
-#define MAX_CURRENT_EXTRA_LIMIT 4
-#define MAX_CURRENT_EXTRA_LIMIT_2 2
+#define MAX_CURRENT_MANUAL 20 
+#define MAX_CURRENT_EXTRA_LIMIT 2
+#define MAX_CURRENT_EXTRA_LIMIT_2 5
 #define STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS 10
 #define MV_PER_AMP 100
 #define MAX_PHASE_MOTION_TIME_MS 	7000	//7 seconds
@@ -343,12 +343,12 @@ void CurrentProtection()
    float current_limit = MAX_CURRENT;
 
   if ((current_command == COMMAND_OPEN ) || (current_command == COMMAND_CLOSE ))
-  float current_limit = MAX_CURRENT_MANUAL;
+    current_limit = MAX_CURRENT_MANUAL;
 
     
     if (current_command == COMMAND_AUTO_OPEN)
     {
-      if((current_state==OP_COVER_CLOSING)||(CL_COVER_CLOSING))
+      if((current_state==OP_COVER_CLOSING)||(current_state==CL_COVER_CLOSING))
 	      current_limit = MAX_CURRENT + MAX_CURRENT_EXTRA_LIMIT;
       else if((current_state ==OP_TENSION_BOW_RAISING)||(current_state ==OP_TENSION_BOW_RAISING))
         current_limit = MAX_CURRENT + MAX_CURRENT_EXTRA_LIMIT_2;
@@ -360,7 +360,7 @@ void CurrentProtection()
     if(current_state==CL_RAISING_TOP    )
        current_limit  = CURRENT_LIMIT_ROOF_LIFTING;
      else if(current_state == CL_TOP_UP)
-       current_limit = MAX_CURRENT + MAX_CURRENT_EXTRA_LIMIT;
+       current_limit = MAX_CURRENT + MAX_CURRENT_EXTRA_LIMIT_2;
        else
         current_limit = MAX_CURRENT;
    
