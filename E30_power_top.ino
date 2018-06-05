@@ -28,7 +28,7 @@
 #define CLOCKWISE  1
 #define STOP	0
 #define COUNTERCLOCKWISE 2
-
+#define OVERCURRENT_TOLERANCE_COUNTS 4
 #define CURRENT_AVERAGING_STEPS  10
 #define CURRENT_RANGE 20
 #define MAX_CURRENT 12
@@ -102,7 +102,7 @@ int manual_commands = 0;
 int manual_counter = 1;
 int OldRoofClose, OldRoofOpen;
 int show_current_measure;
-
+int overcurrent_tolerance_count;
 void setup() {
 //Initialise board
    pinMode(MOTOR_LID_1, OUTPUT);  //was pin 14
@@ -184,6 +184,7 @@ void setup() {
     PollInputs();
     display_switches = 1;
     show_current_measure = 0;
+    overcurrent_tolerance_count = 0;
     ReadSwitchState();
 
 }
@@ -376,13 +377,21 @@ void CurrentProtection()
 
     if (fabs(average) >= current_limit)
     {
+            overcurrent_tolerance_count = overcurrent_tolerance_count +1;
+            if  (overcurrent_tolerance_count >= OVERCURRENT_TOLERANCE_COUNTS)
+            {
+              overcurrent_tolerance_count = 0;
+            
             if (current_state == OP_COVER_CLOSING)
                 if (allow_lid_repeat_closing)
                 TryAndCloseLidAgain();           
 
             current_command = COMMAND_IDLE;
             Serial << "##### current limit reached " << fabs(average) << " (A) \n";
+            }
     }
+    else 
+    overcurrent_tolerance_count = 0;
   
 }
 
