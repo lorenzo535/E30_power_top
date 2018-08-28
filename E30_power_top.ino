@@ -350,8 +350,8 @@ void CurrentProtection()
     {
       if((current_state==OP_COVER_CLOSING)||(current_state==CL_COVER_CLOSING))
 	      current_limit = MAX_CURRENT + MAX_CURRENT_EXTRA_LIMIT;
-      else if((current_state ==OP_TENSION_BOW_RAISING)||(current_state ==OP_TENSION_BOW_RAISING))
-        current_limit = MAX_CURRENT + MAX_CURRENT_EXTRA_LIMIT_2;
+      else if(current_state ==OP_TENSION_BOW_RAISING)
+        current_limit = MAX_CURRENT_MANUAL;
        else
        current_limit = MAX_CURRENT;
     }
