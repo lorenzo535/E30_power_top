@@ -378,9 +378,9 @@ void CurrentProtection()
     {
             if (current_state == OP_COVER_CLOSING)
                 if (allow_lid_repeat_closing)
-                TryAndCloseLidAgain();           
-
-            current_command = COMMAND_IDLE;
+                   TryAndCloseLidAgain();           
+                else 
+                   current_command = COMMAND_IDLE;
             Serial << "##### current limit reached " << fabs(average) << " (A) \n";
     }
   
