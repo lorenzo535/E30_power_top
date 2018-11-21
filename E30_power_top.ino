@@ -10,6 +10,7 @@
 #include <Streaming.h>
 #include "Switch.h"
 #include "mystructs.h"
+#include <SoftwareSerial.h>
 
 #define  LidMotorSwitch1 6  //S3
 #define  LidMotorSwitch2 9  //S4
@@ -39,6 +40,7 @@
 #define STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS 10
 #define MV_PER_AMP 100
 #define MAX_PHASE_MOTION_TIME_MS 	7000	//7 seconds
+#define MONITOR_TIME_PERIOD_MS     200 // ms ; period for sending message
 
 // ROOF OPENING SEQUENCE STATES
 #define OP_TOP_UNLOCKED_AND_LIFTED	2
@@ -92,16 +94,25 @@ int i;
 int current_av_steps;
 OutputCmd opening_state_cmds[16];
 OutputCmd closing_state_cmds[16];
-int current_state, old_state;
+int current_state, old_state, monitor_old_state;
+float monitor_current;
+int monitor_current_limit, monitor_last_current_exceed, monitor_last_current_exceed_state;
 int  display_motor_command = 0;
 int current_command, old_command;
 float raw_current[CURRENT_AVERAGING_STEPS];
 unsigned long motion_start_time;
 unsigned long phase_start_time;
+unsigned long monitor_time;
 int manual_commands = 0;
 int manual_counter = 1;
 int OldRoofClose, OldRoofOpen;
 int show_current_measure;
+
+unsigned short known_states[10];
+char state_labels_open[10][12];
+char state_labels_close[10][12];
+
+SoftwareSerial mySerial(A6, A7);
 
 void setup() {
 //Initialise board
@@ -111,6 +122,7 @@ void setup() {
    pinMode(MOTOR_TOP_2, OUTPUT);
    MotorTopStop();
    MotorLidStop();
+   InitLabels();
 
   /* pinMode(4, INPUT);
    pinMode(5, INPUT);
@@ -120,6 +132,7 @@ void setup() {
    pinMode(9, INPUT);
 */
     Serial.begin(9600);
+    mySerial.begin(9600);
     current_command = COMMAND_IDLE;
     old_command = current_command;
      //Initialise states and commands
@@ -185,6 +198,12 @@ void setup() {
     display_switches = 1;
     show_current_measure = 0;
     ReadSwitchState();
+    monitor_old_state = -99;
+    monitor_current = 0;
+    monitor_current_limit= 0;
+    monitor_last_current_exceed = 0;
+    monitor_last_current_exceed_state = 0;
+    monitor_time = millis();
 
 }
 void resetCurrentAverage()
@@ -224,7 +243,7 @@ void loop ()
     phase_start_time = millis();
     resetCurrentAverage();
     allow_lid_repeat_closing = 1;
-    
+    monitor_old_state = old_state;
   }
   //old_state = current_state;
   
@@ -245,9 +264,38 @@ void loop ()
       
       CheckTimeout();       
   }
-  old_state = current_state;  
+
+  SendToMonitor();
+  old_state = current_state;
   display_motor_command = 0;
  
+}
+
+void SendToMonitor()
+{
+    unsigned long _monitor_time = millis() - monitor_time;
+    if (_monitor_time < MONITOR_TIME_PERIOD_MS)
+        return;
+
+    char buffer[50];
+    // current state (12), old state (12), current_limit (2), monitor_last_current_exceed (4), monitor_last_current_exceed_state (12)
+    if ((current_command == COMMAND_OPEN) || (current_command == COMMAND_AUTO_OPEN))
+        sprintf(buffer, "$,%s,%s,%i,%2.1f,%s", (IsStateValid(current_state) ? state_labels_open[OpeningStateLabelIndex(current_state)] : "ERROR"),
+                                                state_labels_open[OpeningStateLabelIndex(monitor_old_state)],
+                                                monitor_current_limit,
+                                                monitor_last_current_exceed,
+                                                state_labels_open[OpeningStateLabelIndex(monitor_last_current_exceed_state)] );
+
+
+    else
+        sprintf(buffer, "$,%s,%s,%i,%2.1f,%s", (IsStateValid(current_state) ? state_labels_close[ClosingStateLabelIndex(current_state)] : "ERROR"),
+                                                state_labels_close[ClosingStateLabelIndex(monitor_old_state)],
+                                                monitor_current_limit,
+                                                monitor_last_current_exceed,
+                                                state_labels_close[ClosingStateLabelIndex(monitor_last_current_exceed_state)] );
+
+
+    mySerial.println(buffer);
 }
 
 void StopALittle()
@@ -374,6 +422,9 @@ void CurrentProtection()
    skip = skip+1;
  }
 
+ monitor_current = fabs(average);
+ monitor_current_limit = current_limit;
+
     if (fabs(average) >= current_limit)
     {
             if (current_state == OP_COVER_CLOSING)
@@ -382,6 +433,8 @@ void CurrentProtection()
                 else 
                    current_command = COMMAND_IDLE;
             Serial << "##### current limit reached " << fabs(average) << " (A) \n";
+            monitor_last_current_exceed = fabs(average);
+            monitor_last_current_exceed_state = current_state;
     }
   
 }
@@ -721,9 +774,69 @@ void ShowCurrent()
 
 }
 
+void InitLabels()
+{
 
 
+strncpy(state_labels_open[0],"UNLOCK_LIFT",12);
+strncpy(state_labels_open[1],"BOW_RAISING",12);
+strncpy(state_labels_open[2],"BOW_ALL_UP",12);
+strncpy(state_labels_open[3],"COVER_UNLOCK",12);
+strncpy(state_labels_open[4],"COVER_OPEN",12);
+strncpy(state_labels_open[5],"BOW_LOWERING",12);
+strncpy(state_labels_open[6],"TOP_GO_DOWN",12);
+strncpy(state_labels_open[7],"TOP_STOWED",12);
+strncpy(state_labels_open[8],"COVER_CLOSING",12);
+strncpy(state_labels_open[9],"COVER_LOCKED",12);
 
+strncpy(state_labels_open[9],"COVER_LOCK_IN",12);
+strncpy(state_labels_open[8],"COVER_UNLCKD",12);
+strncpy(state_labels_open[7],"COVER_OPENED",12);
+strncpy(state_labels_open[6],"RAISING_TOP",12);
+strncpy(state_labels_open[5],"TOP_UP",12);
+strncpy(state_labels_open[4],"BOW_ALL_UP",12);
+strncpy(state_labels_open[3],"COVER_CLOSING",12);
+strncpy(state_labels_open[2],"COVER_LOCKED",12);
+strncpy(state_labels_open[1],"BOW_LOWERING",12);
+strncpy(state_labels_open[0],"BOW_DOWN",12);
+
+//sequence of state follows opening sequence
+known_states[0] = 2;
+known_states[1] = 6;
+known_states[2] = 14;
+known_states[3] = 12;
+known_states[4] = 13;
+known_states[5] = 5;
+known_states[6] = 1;
+known_states[7] = 9;
+known_states[8] = 8;
+known_states[9] = 10;
+
+}
+
+bool IsStateValid(int _state)
+{
+    int i;
+    for (i=0; i<= 9; i++)
+        if (known_states[i] = _state)
+            return true;
+    return false;
+}
+
+bool OpeningStateLabelIndex(int _state)
+{
+    int i;
+    for (i=0; i<= 9; i++)
+        if (known_states[i] = _state)
+            return i;
+
+}
+
+bool ClosingStateLabelIndex(int _state)
+{
+    return 9 - OpeningStateLabelIndex(_state);
+
+}
 
 
 
