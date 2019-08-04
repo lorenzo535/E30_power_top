@@ -7,9 +7,11 @@
   #include "WProgram.h"
 #endif
 
+
 #include <Streaming.h>
 #include "Switch.h"
 #include "mystructs.h"
+#include <SoftwareSerial.h>
 
 #define  LidMotorSwitch1 6  //S3
 #define  LidMotorSwitch2 9  //S4
@@ -21,6 +23,11 @@
 #define MOTOR_LID_2 12
 #define MOTOR_TOP_1 3  //was 13
 #define MOTOR_TOP_2 10
+
+#define SOFTSERIAL_RX A4
+#define SOFTSERIAL_TX A5
+
+SoftwareSerial HC05Serial(SOFTSERIAL_RX, SOFTSERIAL_TX);
 
 #define ButtonRoofOpen 8
 #define ButtonRoofClose 7
@@ -103,6 +110,8 @@ int manual_counter = 1;
 int OldRoofClose, OldRoofOpen;
 int show_current_measure;
 int overcurrent_tolerance_count;
+String HC05_msg;
+
 void setup() {
 //Initialise board
    pinMode(MOTOR_LID_1, OUTPUT);  //was pin 14
@@ -119,6 +128,10 @@ void setup() {
    pinMode(8, INPUT);
    pinMode(9, INPUT);
 */
+    // define pin modes for tx, rx pins:
+    pinMode(A4, INPUT);
+    pinMode(A5, OUTPUT);
+    HC05Serial.begin(9600);  //USe 38400 if trying to  configure HC05 in AT mdoe
     Serial.begin(9600);
     current_command = COMMAND_IDLE;
     old_command = current_command;
@@ -198,10 +211,41 @@ void resetCurrentAverage()
     current_av_steps = 0;
 }
 
+
+void ConfigureHC05(){
+HC05_msg="";
+while (Serial.available()) {
+delay(10);  
+if (Serial.available() >0) {
+char c = Serial.read();  //gets one byte from serial buffer
+HC05_msg += c; //makes the string readString
+}
+}
+}
+
+
+
+
 void loop ()
 {
 
-  
+/* // CONFIGURE HC05
+//////
+ConfigureHC05();
+if(HC05_msg!="") HC05Serial.println(HC05_msg);
+if (HC05Serial.available()>0){
+Serial.write(HC05Serial.read());
+}
+return;
+//* TEST
+  if (HC05Serial.available()>0){
+Serial.write(HC05Serial.read());
+}
+return;
+//*
+
+////// */
+
   //Read inputs
   PollInputs();
   //ShowCurrent();
@@ -210,6 +254,7 @@ void loop ()
     if (old_command != current_command)
     {
       Serial << "current command " << current_command << ";  current state" << current_state << "\n";
+      HC05Serial << "current command " << current_command << ";  current state" << current_state << "\n";
       display_motor_command = 1;
     }
     old_command = current_command;
@@ -219,6 +264,7 @@ void loop ()
   if (current_state != old_state)
   {  
     Serial << " ******  new state is --> " << current_state<< "\n";
+    HC05Serial << " ******  new state is --> " << current_state<< "\n";
     display_motor_command = 1;
     state_just_changed = STATE_CHANGE_CURRNET_CHECK_INHIBIT_STEPS;
     //StopALittle();
@@ -370,6 +416,7 @@ void CurrentProtection()
    if (skip >= 3)
    {
        Serial << " current measure " << fabs(average) << " (A)  LIMIT : " << current_limit << "\n";
+        HC05Serial << " current measure " << fabs(average) << " (A)  LIMIT : " << current_limit << "\n";
        skip = 0;
    }
    skip = skip+1;
@@ -388,6 +435,7 @@ void CurrentProtection()
 
             current_command = COMMAND_IDLE;
             Serial << "##### current limit reached " << fabs(average) << " (A) \n";
+            HC05Serial << "##### current limit reached " << fabs(average) << " (A) \n";
             }
     }
     else 
@@ -438,43 +486,47 @@ void TestMotors()
 void MotorLidClockwise()
 {
    digitalWrite(MOTOR_LID_1, HIGH);  //14  #define MOTOR_LID_1 14
-   digitalWrite(MOTOR_LID_2, LOW); 
-   if ((manual_commands)||(display_motor_command)) Serial << "MotorLid: clockwise \n";
+   digitalWrite(MOTOR_LID_2, LOW);
+   delay (200); 
+   if ((manual_commands)||(display_motor_command)) {Serial << "MotorLid: clockwise \n"; HC05Serial << "MotorLid: clockwise \n";}
 }
 
 void MotorLidCounterClockwise()
 {
    digitalWrite(MOTOR_LID_2, HIGH);
    digitalWrite(MOTOR_LID_1, LOW);
-   if ((manual_commands)||(display_motor_command)) Serial << "MotorLid: counter-clockwise \n";
+   delay (200);
+   if ((manual_commands)||(display_motor_command)) {Serial << "MotorLid: counter-clockwise \n"; HC05Serial << "MotorLid: counter-clockwise \n";}
 }
 
 void MotorLidStop()
 {
    digitalWrite(MOTOR_LID_1, LOW);
    digitalWrite(MOTOR_LID_2, LOW);
-   if ((manual_commands)||(display_motor_command))Serial << "MotorLid: stop \n";
+   if ((manual_commands)||(display_motor_command)){Serial << "MotorLid: stop \n"; HC05Serial << "MotorLid: stop \n";}
 }
 
 void MotorTopClockwise()
 {
    digitalWrite(MOTOR_TOP_1, HIGH);
    digitalWrite(MOTOR_TOP_2, LOW);
-   if ((manual_commands)||(display_motor_command)) Serial << "MotorTop: clockwise \n";
+   delay (200);
+   if ((manual_commands)||(display_motor_command)) {Serial << "MotorTop: clockwise \n"; HC05Serial << "MotorTop: clockwise \n";}
 }
 
 void MotorTopCounterClockwise()
 {
    digitalWrite(MOTOR_TOP_2, HIGH);
    digitalWrite(MOTOR_TOP_1, LOW);
-   if ((manual_commands)||(display_motor_command)) Serial << "MotorTop: counter-clockwise \n";   
+   delay (200);
+   if ((manual_commands)||(display_motor_command)) {Serial << "MotorTop: counter-clockwise \n"; HC05Serial << "MotorTop: counter-clockwise \n";}   
 }
 
 void MotorTopStop()
 {
    digitalWrite(MOTOR_TOP_2, LOW);
    digitalWrite(MOTOR_TOP_1, LOW);
-   if ((manual_commands)||(display_motor_command)) Serial << "MotorTop: stop \n";   
+   if ((manual_commands)||(display_motor_command)) {Serial << "MotorTop: stop \n"; HC05Serial << "MotorTop: stop \n";   }
 }
 
 void ReadAndDisplayInputs()
@@ -549,6 +601,8 @@ if (display_switches )
   
   Serial << "SW1: " << SW1 <<  " SW2: " << SW2<< " SW3: " << SW3 << " SW4: " << SW4 <<"\n";
   Serial << "in1: " <<!digitalRead(TopMotorSwitch1) <<" in2: " <<!digitalRead(TopMotorSwitch2) <<" in3: " <<digitalRead(LidMotorSwitch1) <<" in4: " <<digitalRead(LidMotorSwitch2)<<"\n";
+  HC05Serial << "SW1: " << SW1 <<  " SW2: " << SW2<< " SW3: " << SW3 << " SW4: " << SW4 <<"\n";
+  HC05Serial << "in1: " <<!digitalRead(TopMotorSwitch1) <<" in2: " <<!digitalRead(TopMotorSwitch2) <<" in3: " <<digitalRead(LidMotorSwitch1) <<" in4: " <<digitalRead(LidMotorSwitch2)<<"\n";
   display_switches = 0;
 
   /*
@@ -635,21 +689,31 @@ int ReadUserCommand()
 
 void ReadKeyboardCmds()
 {
-  
+  char rx_byte='-';
     //Check for manual commands
    if (Serial.available() > 0) 
    {  
-      char rx_byte = Serial.read();       // get the character
+       rx_byte = Serial.read();       // get the character
+   }
+    if (HC05Serial.available() > 0)
+     rx_byte = HC05Serial.read();       // get the character
+
+     if (rx_byte != '-')
+      {
     
       // check if manual command
       if ((rx_byte == 'x') || (rx_byte == 'X')) 
       {
         manual_commands =!manual_commands;
         Serial << "switched to " << (manual_commands ? "manual" : "programmed") << "controls \n";
+        HC05Serial << "switched to " << (manual_commands ? "manual" : "programmed") << "controls \n";
         if (manual_commands)
         {
         Serial << "MANUAL e,E : lid close; r,R lid open; a,A roof close; z,Z roof open ·\n";
         Serial << "AUTO   >  roof close; <  roof open ·\n";
+        HC05Serial << "MANUAL e,E : lid close; r,R lid open; a,A roof close; z,Z roof open ·\n";
+        HC05Serial << "AUTO   >  roof close; <  roof open ·\n";
+        
         MotorLidStop();
         MotorTopStop();
         current_command = COMMAND_IDLE;
@@ -661,6 +725,13 @@ void ReadKeyboardCmds()
       if ((rx_byte == 's') || (rx_byte == 'S')) 
       {
         Serial << " ######  current state is --> " << current_state<< "\n";
+        HC05Serial << " ######  current state is --> " << current_state<< "\n";
+        if ( (current_state == 4) || (current_state == 3)|| (current_state == 7)|| (current_state == 11))
+        {
+          Serial << " +++++  state is unknown, system out of sync \n";
+          HC05Serial << " +++++  state is unknown, system out of sync \n";          
+        }
+        
           current_state = ReadSwitchState();
       }
       
